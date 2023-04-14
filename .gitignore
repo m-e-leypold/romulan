@@ -1,0 +1,8 @@
+*~
+/PKGBUILD
+/PKGBUILD.[0-9]*
+/Project
+/*.tar.gz
+/*.zst
+/pkg
+/src
