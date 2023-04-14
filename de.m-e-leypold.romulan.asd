@@ -16,29 +16,29 @@
 ;;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ;;;
 
+
 (defsystem "de.m-e-leypold.romulan"
-  :author "M E Leypold [elegant-weapons ( AT) m-e-leypold (DOT) de]"
-  :licence "GPL3"
   :description "Declarative interface to clingon"
+  :author "M E Leypold [elegant-weapons (AT) m-e-leypold (DOT) de]"
+  :licence "GPL3"
   :depends-on ("clingon")
   :components ((:file "romulan")))
 
 (defsystem "de.m-e-leypold.romulan/tests"
-  :author "M E Leypold [elegant-weapons ( AT) m-e-leypold (DOT) de]"
+  :description "Tests and specifications for ROMULAN"
+  :author "M E Leypold [elegant-weapons (AT) m-e-leypold (DOT) de]"
   :licence "GPL3"
   :depends-on ("de.m-e-leypold.romulan")
-  :description "Tests and specifications for ROMULAN"
   :components ((:file "tests")))
 
 (defsystem "de.m-e-leypold.romulan/prerequisites"
-  :author "M E Leypold [elegant-weapons ( AT) m-e-leypold (DOT) de]"
+  :author "M E Leypold [elegant-weapons (AT) m-e-leypold (DOT) de]"
   :licence "GPL3"
   :depends-on ("clingon")
-  :description "Just all external prerequisites"
-  :components ())
+  :description "Just all external prerequisites")
 
 (defsystem "de.m-e-leypold.romulan/load-all"
-  :author "M E Leypold [elegant-weapons ( AT) m-e-leypold (DOT) de]"
+  :author "M E Leypold [elegant-weapons (AT) m-e-leypold (DOT) de]"
   :licence "GPL3"
   :description "Load all systems in ROMULAN"
   :depends-on ("de.m-e-leypold.romulan"))
