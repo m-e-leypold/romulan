@@ -1,6 +1,5 @@
-# 
-# Romulan - A declarative interface over clingon.
-# Copyright (C) 2023 M E Leypold
+# Romulan - Declarative interface to the clingon command line argument parser.
+# Copyright (C) 2023  M E Leypold
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,7 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#
 
 # * Targets --------------------------------------------------
 
