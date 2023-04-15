@@ -39,43 +39,42 @@
 (commandline-subcommand-interface romulan-test "shout some words or say hello"
 
   :usage "[-v] [-u <user>] <command> [options ...]"
-
-  :options (:user    (:type :string
-		      :description "user to greet"
+  
+  :options (:user    (:description "user to greet"
 		      :short-name #\u
-		      :long-name "user"
 		      :env-vars ("USER"))
 	    :verbose (:type :counter
 		      :description "verbosity level, every -v bumps up the verbosity by 1"
 		      :short-name #\v
-		      :long-name "verbose")))
+		      :long-name "verbose")))     ; <-- This is not needed
 
-(define-subcommand shout (words &key user verbose)
+
+;;;   Note: No :usage => default is "" in romulan.
+
+(define-subcommand hello (&key user)
+    (:description "just says hello")
+  (format t "Hello, ~A!~%" user))
+
+
+(define-subcommand shout (words &key user friend verbose)
 
     (:description "shouts back anything you write"
      :usage       "[options ...] [arguments ...]"
      :varargs     t
 
-     :options     (:friend (:type :string
-			    :description "a friend"
+     :options     (:friend (:description "a friend"
 			    :short-name #\f
-			    :long-name "friend"
-			    :initial-value ""
-			    :env-vars ("FRIEND"))
-		   :output (:type :string
-			    :description "Output file"
-			    :short-name #\o
-			    :long-name "output"
-			    :initial-value ""
-			    :env-vars ("OUTPUT"))))
-
+			    :env-vars ("FRIEND"))))
+		  
   (if (< 1 verbose)
       (format t "DEBUG: verbosity => ~S~%" verbose))
 
-    (if (< 0 verbose)
-      (format t "Hello, ~A!~%" user))
+  (if (< 0 verbose)
+      (if friend 
+	  (format t "Hello, ~A and ~A!~%" user friend)
+      	  (format t "Hello, ~A!~%" user)))
+  
   (format t "~{~A~^, ~}~%" (mapcar #'string-upcase words)))
-
 
 (end-subcommand-interface)
 

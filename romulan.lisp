@@ -62,8 +62,12 @@
      ,@body))
 
 (defmacro set-default (plist-place indicator default)
-  `(if (eq 'none (getf ,plist-place ,indicator 'none))
-       (setf (getf ,plist-place ,indicator) ,default)))
+  (let ((value (gensym "G.value.")))
+    `(let ((,value (getf ,plist-place ,indicator 'none)))
+       (if (not ,value)
+	   (remf ,plist-place ,indicator)
+	   (if (eq 'none ,value)
+	       (setf (getf ,plist-place ,indicator) ,default))))))
 
 ;;; * -- Interfacing to clingon -----------------------------------------------------------------------------|
 
@@ -71,13 +75,15 @@
 (defun make-option (key attributes)
   ;; TODO Defaults for type and long
 
+  (set-default attributes :type :string)
+  (set-default attributes :long-name (string-downcase (symbol-name key)))
+
   (let ((type (getf attributes :type)))   
     (remf attributes :type)
     (apply #'clingon:make-option `(,type :key ,key ,@attributes))))
 
 (defun make-options (definitions)
-
-  
+ 
   (let ((options '()))
     (do-plist (key attributes definitions)
       (assert (not (getf attributes :key)))
@@ -113,6 +119,7 @@
 (defun make-clingon-command-definitions (name definitions)
   (setf (getf definitions :options) (make-options (getf definitions :options)))
   (set-default definitions :name (string-downcase (symbol-name name)))
+  (set-default definitions :usage "")
   
   (let ((description (getf definitions :description)))
 
