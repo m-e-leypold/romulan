@@ -107,12 +107,11 @@
        (clingon:run ,name argv))))
 
 
-(defun apply-command (cmd name varargsp pos-params key-params)
+(defun apply-command (cmd name varargsp key-params)
   (let ((pos-args (clingon:command-arguments cmd))
 	(key-args (mapcar #'(lambda (key) (list key (clingon:getopt cmd key))) key-params)))
     (setf key-args (apply #'concatenate 'list key-args))
     (if varargsp
-	;; TODO: Assert for length of pos-params, maybe reduce to pos-params-count
 	(apply name pos-args key-args)
 	(apply name (concatenate 'list pos-args key-args)))))
 
@@ -138,17 +137,19 @@
 
     (setf definitions (make-clingon-command-definitions name definitions))
 
-
     (multiple-value-bind (pos-params key-params) (split-lambdalist lambda-list)
       (let ((keywords (find-package :keyword)))
 	(setf key-params (mapcar #'(lambda (s) (intern (symbol-name s) keywords)) key-params)))
 
-      (assert (or (not varargs) (= 1 (length pos-params))))
+      (assert (or (not varargs) (= 1 (length pos-params)))
+	      nil (format
+		   nil
+		   "Subcommand ~S with variable positional arguments must only have one positional lisp parameter, but has: ~A" name pos-params))
 
       (let ((command
 	      (apply #'clingon:make-command
 		     :handler #'(lambda (cmd)
-				  (apply-command cmd name varargs pos-params key-params))
+				  (apply-command cmd name varargs key-params))
 		     definitions)))
 	(push command (get *current-cli* 'sub-commands))))))
 
