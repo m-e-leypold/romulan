@@ -26,7 +26,126 @@
   (:documentation "
     TODO: Complete package docstring
    ")
-
-  (:use :common-lisp))
-
+  (:use :common-lisp) 
+  (:export
+   :commandline-subcommand-interface :end-subcommand-interface :define-subcommand
+   :with-posix-args))
+			     
 (in-package :de.m-e-leypold.romulan)
+
+;;; * -- Utilities ------------------------------------------------------------------------------------------|
+
+(defmacro do-plist ((key value plist) &body body)
+  (let ((rest (gensym "G.rest.")))
+    `(do* ((,rest  ,plist (cddr ,rest))
+	   (,key   (car ,plist) (car ,rest))
+	   (,value (cadr ,plist) (cadr ,rest)))
+	 ((not ,rest))
+       ,@body)))
+
+
+(defun split-lambdalist (lambda-list)
+  (let* ((posargs '())
+	 (keyargs     
+	   (do ((param (car lambda-list) (car rest))
+		(rest (cdr lambda-list) (cdr rest)))
+	       ((or (not rest) (eq param '&key))
+		rest)
+	     (push param posargs))))
+    (values posargs keyargs)))
+
+
+(defmacro with-posix-args ((&rest args) &body body)
+  `(let ((
+	  #+sbcl sb-ext:*posix-argv*
+	  ,args))
+     ,@body))
+
+;;; * -- Interfacing to clingon -----------------------------------------------------------------------------|
+
+
+(defun make-option (key attributes)
+  (let ((type (getf attributes :type)))   
+    (remf attributes :type)
+    (apply #'clingon:make-option `(,type :key ,key ,@attributes))))
+
+(defun make-options (definitions)
+  (let ((options '()))
+    (do-plist (key attributes definitions)
+      (assert (not (getf attributes :key)))
+      (push (make-option key attributes) options))
+    (reverse options)))
+
+
+;;; * -- Subcommand Interface -------------------------------------------------------------------------------|
+
+(defvar *current-cli* nil)
+
+(defmacro commandline-subcommand-interface (name description &body attributes)
+  (setf *current-cli* name)
+  (setf (getf attributes :description) description)  
+  (if (not (getf attributes :name))
+      (setf (getf attributes :name) (symbol-name name))) 
+  `(progn
+     (declaim (special ,name))
+     (setf ,name (quote ,attributes))
+     (setf (get (quote ,name) 'sub-commands) '())
+     (defun ,name (&rest argv)
+       ""
+       (clingon:run ,name argv))))
+
+
+(defun apply-command (cmd name varargsp pos-params key-params)
+  (let ((pos-args (clingon:command-arguments cmd))
+	(key-args (mapcar #'(lambda (key) (list key (clingon:getopt cmd key))) key-params)))
+    (setf key-args (apply #'concatenate 'list key-args))
+    (if varargsp
+	;; TODO: Assert for length of pos-params, maybe reduce to pos-params-count
+	(apply name pos-args key-args)
+	(apply name (concatenate 'list pos-args key-args)))))
+       
+(defun define-command% (name lambda-list definitions)
+  (setf (getf definitions :options) (make-options (getf definitions :options)))
+  (let ((varargs (getf definitions :varargs)))
+    (remf definitions :varargs)
+    (remf definitions :docstring)    
+    
+    (multiple-value-bind (pos-params key-params) (split-lambdalist lambda-list)
+      (let ((keywords (find-package :keyword)))
+	(setf key-params (mapcar #'(lambda (s) (intern (symbol-name s) keywords)) key-params)))
+
+      (assert (or (not varargs) (= 1 (length pos-params))))
+      
+      ;; TODO Add possible default for :name from NAME
+      ;; TODO Defaults for type and long
+      ;; TODO If :description is a list, joing with ~%
+      
+      (let ((command
+	      (apply #'clingon:make-command
+		     :handler #'(lambda (cmd)			      
+				  (apply-command cmd name varargs pos-params key-params))
+		     definitions)))
+	(push command (get *current-cli* 'sub-commands))))))
+
+
+(defmacro define-subcommand (name lambda-list (&rest definitions) &body body )
+  `(progn
+     (defun ,name ,lambda-list
+       ,@body)
+     (define-command% (quote ,name) (quote ,lambda-list) (quote ,definitions))))
+
+
+(defun end-subcommand-interface ()
+  (let ((definitions (symbol-value *current-cli*)))
+    (setf (getf definitions :options) (make-options (getf definitions :options)))
+    (setf (getf definitions :handler)
+	  #'(lambda (cmd) (clingon:print-usage cmd *standard-output*)))
+    (setf (getf definitions :sub-commands) (get *current-cli* 'sub-commands))
+    (setf (symbol-value *current-cli*)
+	  (apply 'clingon:make-command definitions)))
+  (setf *current-cli* nil))
+
+
+
+    
+
