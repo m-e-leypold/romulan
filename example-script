@@ -52,8 +52,7 @@
 
 (define-subcommand shout (words &key user verbose)
 		 
-    (:name        "shout"
-     :description "shouts back anything you write"
+    (:description "shouts back anything you write"
      :usage       "[options ...] [arguments ...]"
      :docstring   "A lisp documentation string"     
      :varargs     t

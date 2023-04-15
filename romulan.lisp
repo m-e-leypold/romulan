@@ -61,15 +61,23 @@
 	  ,args))
      ,@body))
 
+(defmacro set-default (plist-place indicator default)
+  `(if (eq 'none (getf ,plist-place ,indicator 'none))
+       (setf (getf ,plist-place ,indicator) ,default)))
+
 ;;; * -- Interfacing to clingon -----------------------------------------------------------------------------|
 
 
 (defun make-option (key attributes)
+  ;; TODO Defaults for type and long
+
   (let ((type (getf attributes :type)))   
     (remf attributes :type)
     (apply #'clingon:make-option `(,type :key ,key ,@attributes))))
 
 (defun make-options (definitions)
+
+  
   (let ((options '()))
     (do-plist (key attributes definitions)
       (assert (not (getf attributes :key)))
@@ -84,8 +92,6 @@
 (defmacro commandline-subcommand-interface (name description &body attributes)
   (setf *current-cli* name)
   (setf (getf attributes :description) description)  
-  (if (not (getf attributes :name))
-      (setf (getf attributes :name) (symbol-name name))) 
   `(progn
      (declaim (special ,name))
      (setf ,name (quote ,attributes))
@@ -103,22 +109,34 @@
 	;; TODO: Assert for length of pos-params, maybe reduce to pos-params-count
 	(apply name pos-args key-args)
 	(apply name (concatenate 'list pos-args key-args)))))
-       
-(defun define-command% (name lambda-list definitions)
+
+(defun make-clingon-command-definitions (name definitions)
   (setf (getf definitions :options) (make-options (getf definitions :options)))
+  (set-default definitions :name (string-downcase (symbol-name name)))
+  
+  (let ((description (getf definitions :description)))
+
+    ;; Not useful ATM
+    #+nil (if (consp description)
+	      (setf (getf definitions :description) (format nil "~{~A~^~%~}" description)))
+    )
+  definitions)
+
+
+(defun define-command% (name lambda-list definitions)
+  
   (let ((varargs (getf definitions :varargs)))
     (remf definitions :varargs)
-    (remf definitions :docstring)    
+    (remf definitions :docstring)
+    
+    (setf definitions (make-clingon-command-definitions name definitions))
+      
     
     (multiple-value-bind (pos-params key-params) (split-lambdalist lambda-list)
       (let ((keywords (find-package :keyword)))
 	(setf key-params (mapcar #'(lambda (s) (intern (symbol-name s) keywords)) key-params)))
 
       (assert (or (not varargs) (= 1 (length pos-params))))
-      
-      ;; TODO Add possible default for :name from NAME
-      ;; TODO Defaults for type and long
-      ;; TODO If :description is a list, joing with ~%
       
       (let ((command
 	      (apply #'clingon:make-command
@@ -137,10 +155,13 @@
 
 (defun end-subcommand-interface ()
   (let ((definitions (symbol-value *current-cli*)))
-    (setf (getf definitions :options) (make-options (getf definitions :options)))
+
+    (setf definitions (make-clingon-command-definitions *current-cli* definitions))
+    
     (setf (getf definitions :handler)
 	  #'(lambda (cmd) (clingon:print-usage cmd *standard-output*)))
     (setf (getf definitions :sub-commands) (get *current-cli* 'sub-commands))
+    
     (setf (symbol-value *current-cli*)
 	  (apply 'clingon:make-command definitions)))
   (setf *current-cli* nil))
