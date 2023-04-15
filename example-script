@@ -37,7 +37,7 @@
 ;;; * Defining a "multi-command" interface with sub-commands -------------------------------------------------
 
 (commandline-subcommand-interface romulan-test "shout some words or say hello"
- 
+
   :usage "[-v] [-u <user>] <command> [options ...]"
 
   :options (:user    (:type :string
@@ -51,12 +51,11 @@
 		      :long-name "verbose")))
 
 (define-subcommand shout (words &key user verbose)
-		 
+
     (:description "shouts back anything you write"
      :usage       "[options ...] [arguments ...]"
-     :docstring   "A lisp documentation string"     
      :varargs     t
-     
+
      :options     (:friend (:type :string
 			    :description "a friend"
 			    :short-name #\f
@@ -86,5 +85,3 @@
 ;;;
 
 (romulan-test)
-
-
