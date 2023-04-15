@@ -39,7 +39,7 @@
 (commandline-subcommand-interface romulan-test "shout some words or say hello"
 
   :usage "[-v] [-u <user>] <command> [options ...]"
-  
+
   :options (:user    (:description "user to greet"
 		      :short-name #\u
 		      :env-vars ("USER"))
@@ -53,6 +53,7 @@
 
 (define-subcommand hello (&key user)
     (:description "just says hello")
+
   (format t "Hello, ~A!~%" user))
 
 
@@ -65,15 +66,15 @@
      :options     (:friend (:description "a friend"
 			    :short-name #\f
 			    :env-vars ("FRIEND"))))
-		  
+
   (if (< 1 verbose)
       (format t "DEBUG: verbosity => ~S~%" verbose))
 
   (if (< 0 verbose)
-      (if friend 
+      (if friend
 	  (format t "Hello, ~A and ~A!~%" user friend)
       	  (format t "Hello, ~A!~%" user)))
-  
+
   (format t "~{~A~^, ~}~%" (mapcar #'string-upcase words)))
 
 (end-subcommand-interface)

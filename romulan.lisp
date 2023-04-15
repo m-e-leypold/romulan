@@ -26,11 +26,11 @@
   (:documentation "
     TODO: Complete package docstring
    ")
-  (:use :common-lisp) 
+  (:use :common-lisp)
   (:export
    :commandline-subcommand-interface :end-subcommand-interface :define-subcommand
    :with-posix-args))
-			     
+
 (in-package :de.m-e-leypold.romulan)
 
 ;;; * -- Utilities ------------------------------------------------------------------------------------------|
@@ -46,7 +46,7 @@
 
 (defun split-lambdalist (lambda-list)
   (let* ((posargs '())
-	 (keyargs     
+	 (keyargs
 	   (do ((param (car lambda-list) (car rest))
 		(rest (cdr lambda-list) (cdr rest)))
 	       ((or (not rest) (eq param '&key))
@@ -78,12 +78,12 @@
   (set-default attributes :type :string)
   (set-default attributes :long-name (string-downcase (symbol-name key)))
 
-  (let ((type (getf attributes :type)))   
+  (let ((type (getf attributes :type)))
     (remf attributes :type)
     (apply #'clingon:make-option `(,type :key ,key ,@attributes))))
 
 (defun make-options (definitions)
- 
+
   (let ((options '()))
     (do-plist (key attributes definitions)
       (assert (not (getf attributes :key)))
@@ -97,7 +97,7 @@
 
 (defmacro commandline-subcommand-interface (name description &body attributes)
   (setf *current-cli* name)
-  (setf (getf attributes :description) description)  
+  (setf (getf attributes :description) description)
   `(progn
      (declaim (special ,name))
      (setf ,name (quote ,attributes))
@@ -120,7 +120,7 @@
   (setf (getf definitions :options) (make-options (getf definitions :options)))
   (set-default definitions :name (string-downcase (symbol-name name)))
   (set-default definitions :usage "")
-  
+
   (let ((description (getf definitions :description)))
 
     ;; Not useful ATM
@@ -131,23 +131,23 @@
 
 
 (defun define-command% (name lambda-list definitions)
-  
+
   (let ((varargs (getf definitions :varargs)))
     (remf definitions :varargs)
     (remf definitions :docstring)
-    
+
     (setf definitions (make-clingon-command-definitions name definitions))
-      
-    
+
+
     (multiple-value-bind (pos-params key-params) (split-lambdalist lambda-list)
       (let ((keywords (find-package :keyword)))
 	(setf key-params (mapcar #'(lambda (s) (intern (symbol-name s) keywords)) key-params)))
 
       (assert (or (not varargs) (= 1 (length pos-params))))
-      
+
       (let ((command
 	      (apply #'clingon:make-command
-		     :handler #'(lambda (cmd)			      
+		     :handler #'(lambda (cmd)
 				  (apply-command cmd name varargs pos-params key-params))
 		     definitions)))
 	(push command (get *current-cli* 'sub-commands))))))
@@ -164,16 +164,11 @@
   (let ((definitions (symbol-value *current-cli*)))
 
     (setf definitions (make-clingon-command-definitions *current-cli* definitions))
-    
+
     (setf (getf definitions :handler)
 	  #'(lambda (cmd) (clingon:print-usage cmd *standard-output*)))
     (setf (getf definitions :sub-commands) (get *current-cli* 'sub-commands))
-    
+
     (setf (symbol-value *current-cli*)
 	  (apply 'clingon:make-command definitions)))
   (setf *current-cli* nil))
-
-
-
-    
-
