@@ -46,13 +46,9 @@
 
     (:description "shouts back anything you write"
      :usage       "[options ...] [arguments ...]"
-     :varargs     t
+     :varargs     t)
 
-     :options     (:friend (:description "a friend"
-			    :short-name #\f
-			    :env-vars ("FRIEND"))))
-    
-  (format t "~{~A~^ ~}, ~A!~%" (mapcar #'string-upcase words) user))
+    (format t "~{~A~^ ~}, ~A!~%" (mapcar #'string-upcase words) user))
 
 (end-subcommand-interface)
 

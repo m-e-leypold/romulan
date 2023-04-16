@@ -78,7 +78,7 @@ You will find the following *Romulan* example in file
 [```example-script-2```](./example-script-2) in the *Romulan* source, a
 slightly larger example in [```example-script```](./example-script).
 
-In *Romulan* a interface with subcommands is declared with
+In *Romulan* an interface with subcommands is declared with
 ```commandline-subcommand-interface```. The declaration needs to
 contain at least a usage string (that is later used to construct help
 text) and the definition of global options:
@@ -125,12 +125,8 @@ usage, one-line help text and the subcommand options.
 
 		  (:description "shouts back anything you write"
 		   :usage       "[options ...] [arguments ...]"
-		   :varargs     t
-
-		   :options     (:friend (:description "a friend"
-					  :short-name #\f
-					  :env-vars ("FRIEND"))))
-
+		   :varargs     t)
+		   
 		(format t "~{~A~^ ~}, ~A!~%" (mapcar #'string-upcase words) user))
 
 All subcommands are indeed procedures and where the ```&key```
