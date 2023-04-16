@@ -18,12 +18,6 @@
 ;;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; * Importing the runtime environment ----------------------------------------------------------------------
-;;;
-;;;   Notes:
-;;;     - (require 'asdf) is necessary for use with sbcl --script. With sbcl-script it is a no-op.
-;;;     - Redirectiing *standard-output* while loading asdf systems, so that the compile messages
-;;;       go to *error-ouput*. This is necessary so that scripts play nicely in shell pipelines.
-;;;
 
 (require 'asdf)
 
@@ -38,26 +32,17 @@
 
 (commandline-subcommand-interface romulan-test "shout some words or say hello"
 
-  :usage "[-v] [-u <user>] <command> [options ...]"
-
+  :usage   "[-v] [-u <user>] <command> [options ...]"
   :options (:user    (:description "user to greet"
 		      :short-name #\u
-		      :env-vars ("USER"))
-	    :verbose (:type :counter
-		      :description "verbosity level, every -v bumps up the verbosity by 1"
-		      :short-name #\v
-		      :long-name "verbose")))     ; <-- This is not needed
-
-
-;;;   Note: No :usage => default is "" in romulan.
+		      :env-vars ("USER"))))
 
 (define-subcommand hello (&key user)
     (:description "just says hello")
-
+  
   (format t "Hello, ~A!~%" user))
 
-
-(define-subcommand shout (words &key user friend verbose)
+(define-subcommand shout (words &key user)
 
     (:description "shouts back anything you write"
      :usage       "[options ...] [arguments ...]"
@@ -66,22 +51,11 @@
      :options     (:friend (:description "a friend"
 			    :short-name #\f
 			    :env-vars ("FRIEND"))))
-
-  (if (< 1 verbose)
-      (format t "DEBUG: verbosity => ~S~%" verbose))
-
-  (if (< 0 verbose)
-      (if friend
-	  (format t "Hello, ~A and ~A!~%" user friend)
-      	  (format t "Hello, ~A!~%" user)))
-
-  (format t "~{~A~^ ~}~%" (mapcar #'string-upcase words)))
+    
+  (format t "~{~A~^ ~}, ~A!~%" (mapcar #'string-upcase words) user))
 
 (end-subcommand-interface)
 
 ;;; * Immediately executing the commandline interface --------------------------------------------------------
-;;;
-;;;   Note: commandline-subcommand-interface created a function that executes the defined interface.
-;;;
 
 (romulan-test)

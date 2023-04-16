@@ -103,7 +103,7 @@
      (setf ,name (quote ,attributes))
      (setf (get (quote ,name) 'sub-commands) '())
      (defun ,name (&rest argv)
-       ""
+       ,(format nil "Command line interface '~A'" (symbol-name name))
        (clingon:run ,name argv))))
 
 
