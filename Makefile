@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# 
 
 # * Targets --------------------------------------------------
 
@@ -42,9 +43,11 @@ BINFILES   ?= $(patsubst ./%,%,\
 LISPFILES   := $(strip $(LISPFILES))
 BINFILES    := $(strip $(BINFILES))
 
-USER-BINDIR   ?= $(lastword $(wildcard ~/my/scripts/bin ~/my/bin ~/bin))
+USER-BINDIR   ?= $(lastword $(wildcard ~/my/scripts/bin ~/my/bin ~/bin ~/.local/bin))
+
 USER-LISPROOT ?= $(lastword \
                      $(wildcard ~/share/common-lisp/source ~/my/asdf ~/.asdf))
+
 USER-LISPDIR  := $(USER-LISPROOT)/$(SHORT-NAME)
 
 
@@ -67,16 +70,20 @@ endif
 
 # ** Staging for packaging (or direct installation) ----------
 
+$(BINFILES:%=.build/bin/%): .build/bin/%: %
+	set -eu
+	mkdir -p "$(@D)"
+	sed < "$<" '/^[#][!]/s|^[#][!].*|#!/usr/bin/sbcl --script|' >$@
+
 install-lisp:
 	set -eu
 	mkdir -p $(DEST)$(LISPDIR)
 	install -m 644 $(LISPFILES) $(DEST)$(LISPDIR)
 
-install-bin:
+install-bin: $(BINFILES:%=.build/bin/%)
 	set -eu
 	mkdir -p $(DEST)$(BINDIR)
-	install -m 755 $(BINFILES) $(DEST)$(BINDIR)/
-
+	install -m 755 $(BINFILES:%=.build/bin/%) $(DEST)$(BINDIR)/
 
 clean::
 	rm -rf $(DEST)
@@ -102,28 +109,35 @@ PACKAGE := $(SHORT-NAME)-$(PKGVER)-1-any.pkg.tar.zst
 $(info VERSION  = $(VERSION))
 $(info PKGVER   = $(PKGVER))
 $(info PACKAGE  = $(PACKAGE))
+$(info TARFILE  = $(TARFILE))
 
-PKGBUILD.$(VERSION):: PKGBUILD.template
+.build/arch-package/PKGBUILD.$(VERSION):: PKGBUILD.t
+	set -eu
+	mkdir -p "$(@D)"
 	sed <$< \
-            's|__PKGVER__|$(PKGVER)|g;s|__SHORTNAME__|$(SHORT-NAME)|g;s|__VERSION__|$(VERSION)|' \
+            's|__PKGVER__|$(PKGVER)|g;s|__PKGNAME__|$(SHORT-NAME)|g;s|__VERSION__|$(VERSION)|' \
             >$@
 
-PKGBUILD: PKGBUILD.$(VERSION)
+.build/arch-package/PKGBUILD: .build/arch-package/PKGBUILD.$(VERSION)
+	set -eu
+	mkdir -p "$(@D)"
 	cp $< $@
 
-$(TARFILE):: PKGBUILD.$(VERSION)
+.build/arch-package/$(TARFILE):: .build/arch-package/PKGBUILD.$(VERSION)
+	set -eu
+	mkdir -p "$(@D)"
 	git archive -o "$@" HEAD
 
-$(PACKAGE): $(TARFILE) PKGBUILD
+.build/arch-package/$(PACKAGE): .build/arch-package/$(TARFILE) .build/arch-package/PKGBUILD
+	set -eu
+	cd .build/arch-package/
 	rm -rf pkg src
 	makepkg -f
 
-package: $(PACKAGE)
+package: .build/arch-package/$(PACKAGE)
 
 clean::
-	rm -f *.tar.gz *.zst
-	rm -rf src pkg
-	rm -f PKGBUILD.[0-9]* PKGBUILD *~
+	rm -rf .stage .build
 
 # * Project integration --------------------------------------
 
