@@ -29,6 +29,7 @@
   (:use :common-lisp)
   (:export
    :commandline-subcommand-interface :end-subcommand-interface :define-subcommand
+   :commandline-interface
    :with-posix-args))
 
 (in-package :de.m-e-leypold.romulan)
@@ -55,11 +56,56 @@
     (values posargs keyargs)))
 
 
-(defmacro with-posix-args ((&rest args) &body body)
-  `(let ((
-	  #+sbcl sb-ext:*posix-argv*
-	  ,args))
-     ,@body))
+#-(or abcl clozure cmucl gcl lispworks mcl sbcl scl xcl)
+(defconstant can-simulate-empty-argv nil)
+
+#+(or abcl clozure cmucl gcl lispworks mcl sbcl scl xcl)
+(progn
+  (defconstant can-simulate-empty-argv t)
+  (defmacro with-posix-args ((&rest args) &body body)
+    `(let ((
+	    #+abcl ext:*command-line-argument-list* ; Use 1.0.0 or later!
+	    #+clozure ccl:*command-line-argument-list*
+	    #+(or cmucl scl) extensions:*command-line-strings*
+	    #+gcl si:*command-args*
+	    #+lispworks sys:*line-arguments-list*
+	    #+sbcl sb-ext:*posix-argv*
+	    #+xcl system:*argv*
+	    ,args))
+
+       ;; Note: uiop only provides for reading the argv, but not for setting them. Unfortunately
+       ;; clingon invokes uiop:command-line-arguments when no arguments are passed to
+       ;; clingon:run. Which makes it impossible to invoke a clingon command directly with an
+       ;; empty argument vector in a process that got any arguments. E.g. for testing.
+       ;;
+       ;; Without patching clingon the only reliable option to simulate a call with a specific
+       ;; argument is to set the argument vector of the process temporarily and that is only
+       ;; possible if it is a dynamic variable.
+       ;;
+       ;; The list above has been pertially ripped from uiop and only entries retained that are
+       ;; dynamic variables. The mechanism has only been tested for sbcl so far.
+       ;;
+       ;; For the following lisp implementations I don't currently know a way to override the
+       ;; command line argv. Long term changing clingon to allow overriding even for an empty
+       ;; argv seems to be unavoidable.
+       ;;
+       ;; Unsupported on: allegro mkcl genera clisp clasp
+       ;;
+
+       ,@body)))
+
+(defun run-with-argv (cmd argv)
+  #+(or abcl clozure cmucl gcl lispworks mcl sbcl scl xcl)
+  (with-posix-args (argv)
+    (clingon-run cmd))
+  #-(or abcl clozure cmucl gcl lispworks mcl sbcl scl xcl)
+  (progn
+    (assert argv nil "Cannot simulate empty argv in this implementation")
+    (clingon-run cmd argv)))
+
+;; Note: For the case that we don't have with-posix-argv, see above. In this case an empty argv
+;; cannot be simulated. Tests using this need to be skipped. CAN-SIMULATE-EMPTY-ARGV can be
+;; used to make this decision.
 
 (defmacro set-default (plist-place indicator default)
   (let ((value (gensym "G.value.")))
@@ -102,10 +148,13 @@
      (declaim (special ,name))
      (setf ,name (quote ,attributes))
      (setf (get (quote ,name) 'sub-commands) '())
-     (defun ,name (&rest argv)
-       ,(format nil "Command line interface '~A'" (symbol-name name))
-       (clingon:run ,name argv))))
 
+     (defun ,name (&optional (first 'process) &rest rest)
+       ,(format nil "Command line interface '~A'" (symbol-name name))
+       (case first
+	 ('process (clingon:run ,name))
+	 (:argv    (apply 'run-with-argv ,name rest))
+	 (t       (apply 'run-with-argv ,name first rest))))))
 
 (defun apply-command (cmd name varargsp key-params)
   (let ((pos-args (clingon:command-arguments cmd))
@@ -129,7 +178,7 @@
   definitions)
 
 
-(defun define-command% (name lambda-list definitions)
+(defun define-command% (name procedure lambda-list definitions)
 
   (let ((varargs (getf definitions :varargs)))
     (remf definitions :varargs)
@@ -144,21 +193,22 @@
       (assert (or (not varargs) (= 1 (length pos-params)))
 	      nil (format
 		   nil
-		   "Subcommand ~S with variable positional arguments must only have one positional lisp parameter, but has: ~A" name pos-params))
+		   "varargs commands must only have on positional paramater, ~S has ~A"
+		   name pos-params))
 
       (let ((command
 	      (apply #'clingon:make-command
 		     :handler #'(lambda (cmd)
-				  (apply-command cmd name varargs key-params))
+				  (apply-command cmd procedure varargs key-params))
 		     definitions)))
-	(push command (get *current-cli* 'sub-commands))))))
-
+	command))))
 
 (defmacro define-subcommand (name lambda-list (&rest definitions) &body body )
   `(progn
      (defun ,name ,lambda-list
        ,@body)
-     (define-command% (quote ,name) (quote ,lambda-list) (quote ,definitions))))
+     (push (define-command% (quote ,name) (quote ,name) (quote ,lambda-list) (quote ,definitions))
+	   (get *current-cli* 'sub-commands))))
 
 
 (defun end-subcommand-interface ()
@@ -173,3 +223,34 @@
     (setf (symbol-value *current-cli*)
 	  (apply 'clingon:make-command definitions)))
   (setf *current-cli* nil))
+
+;;; * -- Single command interface ---------------------------------------------------------------------------|
+
+(defmacro commandline-interface (name lambda-list description attributes &body body)
+  (setf (getf attributes :description) description)
+  (let ((procedure (gensym (concatenate 'string "G." (symbol-name name)))))
+    `(progn
+
+       (defun ,procedure ,lambda-list
+	 ,@body)
+
+       (declaim (special ,name))
+
+       (setf ,name
+	     (define-command% (quote ,name) (quote ,procedure) (quote ,lambda-list) (quote ,attributes)))
+
+       (defun ,name (&optional (first 'process) &rest rest)
+
+	 ;; TODO: This procedure should take key arguments for direct calling (apply) and simulating argv
+	 ;; and use with-posix-argv
+
+	 ;; TODO: Also use run and run-with-argv, the latter defaulting to clingon::run for
+	 ;; implementations where I cannot have with-posix-argv. See there.
+
+	 ,(format nil "Command line interface '~A'" (symbol-name name))
+	 ;; (clingon:run ,name)
+	 (case first
+		('process (clingon:run ,name))
+		(:apply  (apply #',procedure rest))
+		(:argv    (apply 'run-with-argv ,name rest))
+		(t       (apply 'run-with-argv ,name first rest)))))))

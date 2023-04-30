@@ -179,7 +179,6 @@ For the full license text see [LICENSE](./LICENSE.md).
 Future development
 ------------------
 
-- Command line application without sub commands (single procedure).
 - Free text help pages, stand-alone and associated to commands.
 - Systematic tests are currently missing. There are only the example scripts.
 

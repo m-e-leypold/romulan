@@ -1,4 +1,7 @@
-;;; Romulan - Declarative interface to the clingon command line argument parser.
+#!/usr/bin/env sbcl-script
+;;; -*- common-lisp -*- ------------------------------
+;;;
+;;; example-script - Example for romulan usage in scripting
 ;;; Copyright (C) 2023  M E Leypold
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
@@ -13,22 +16,23 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+;;; * Importing the runtime environment ----------------------------------------------------------------------
 ;;;
-;;; * Options -----------------------------------------------------------------------------------------------|
+;;;   Notes:
+;;;     - (require 'asdf) is necessary for use with sbcl --script. With sbcl-script it is a no-op.
+;;;     - Redirectiing *standard-output* while loading asdf systems, so that the compile messages
+;;;       go to *error-ouput*. This is necessary so that scripts play nicely in shell pipelines.
+;;;
 
-(declaim (optimize (speed 0) (space 0) (compilation-speed 0) (debug 3) (safety 3)))
+(require 'asdf)
 
-;;; * Define package ----------------------------------------------------------------------------------------|
+(let ((*standard-output* *error-output*))
+  (asdf:require-system "de.m-e-leypold.romulan"))
 
-(defpackage :de.m-e-leypold.romulan/tests
-  (:documentation "Testing romulan")
-  (:use
-   :common-lisp
-   :de.m-e-leypold.romulan))
+(use-package :de.m-e-leypold.romulan)
 
-(in-package :de.m-e-leypold.romulan/tests)
-
-;;; * Some test fixtures -----------------------------------------------------------------------------------|
+;;; * Defining a "single-command interface" ------------------------------------------------------------------
 
 (commandline-interface romulan-test (words &key user verbose)
 
@@ -53,3 +57,10 @@
       (format t "Hello, ~A!~%" user))
 
   (format t "~{~A~^ ~}!!!~%" (mapcar #'string-upcase words)))
+
+;;; * Immediately executing the commandline interface --------------------------------------------------------
+;;;
+;;;   Note: commandline-subcommand-interface created a function that executes the defined interface.
+;;;
+
+(romulan-test)
