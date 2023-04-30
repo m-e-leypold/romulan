@@ -30,8 +30,6 @@
 (let ((*standard-output* *error-output*))
   (asdf:require-system "de.m-e-leypold.romulan"))
 
-;;; * Importing the runtime environment ----------------------------------------------------------------------
-
 (use-package :de.m-e-leypold.romulan)
 
 ;;; * Defining a "multi-command" interface with sub-commands -------------------------------------------------
@@ -62,19 +60,19 @@
     (:description "shouts back anything you write"
      :usage       "[options ...] [arguments ...]"
      :varargs     t
-
+     
      :options     (:friend (:description "a friend"
 			    :short-name #\f
 			    :env-vars ("FRIEND"))))
 
   (if (< 1 verbose)
       (format t "DEBUG: verbosity => ~S~%" verbose))
-
+  
   (if (< 0 verbose)
       (if friend
 	  (format t "Hello, ~A and ~A!~%" user friend)
       	  (format t "Hello, ~A!~%" user)))
-
+  
   (format t "~{~A~^ ~}~%" (mapcar #'string-upcase words)))
 
 (end-subcommand-interface)

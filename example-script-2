@@ -48,7 +48,7 @@
      :usage       "[options ...] [arguments ...]"
      :varargs     t)
 
-    (format t "~{~A~^ ~}, ~A!~%" (mapcar #'string-upcase words) user))
+  (format t "~{~A~^ ~}, ~A!~%" (mapcar #'string-upcase words) user))
 
 (end-subcommand-interface)
 

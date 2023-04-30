@@ -45,10 +45,10 @@
 			  :short-name #\u
 			  :env-vars ("USER"))
 
-			 :verbose (:type :counter
-				   :description "verbosity level, every -v bumps up the verbosity by 1"
-				   :short-name #\v
-				   :long-name "verbose")))     ; <-- This would be the default
+		:verbose (:type :counter
+			  :description "verbosity level, every -v bumps up the verbosity by 1"
+			  :short-name #\v
+			  :long-name "verbose")))     ; <-- This would be the default
 
   (if (< 1 verbose)
       (format t "DEBUG: verbosity => ~S~%" verbose))
